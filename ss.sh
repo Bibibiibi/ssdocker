@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "========== Xray Docker 一键部署 =========="
+echo "========== Xray Docker 一键部署（智能优化版） =========="
 
 # 容器名称
 read -p "请输入容器名称 (默认: xray): " CONTAINER_NAME
@@ -40,39 +40,97 @@ FAKE_PATH=${FAKE_PATH:-/}
 read -p "请输入伪装 Host (默认: weKbP9SVYU.download.windowsupdate.com): " FAKE_HOST
 FAKE_HOST=${FAKE_HOST:-weKbP9SVYU.download.windowsupdate.com}
 
-# 智能系统优化
-echo ""
-read -p "是否进行系统优化？(推荐) [Y/n]: " OPTIMIZE
-OPTIMIZE=${OPTIMIZE:-Y}
+# 检测系统资源并决定优化等级
+CORES=$(nproc)
+MEM_MB=$(free -m | awk '/Mem:/ { print $2 }')
 
-if [[ "$OPTIMIZE" == "Y" || "$OPTIMIZE" == "y" ]]; then
-  echo "⚙️ 开始进行系统优化..."
+echo "检测到 CPU 核心数：$CORES"
+echo "检测到内存：${MEM_MB}MB"
 
-  CORES=$(nproc)
-  MEM_MB=$(free -m | awk '/Mem:/ { print $2 }')
+if [[ $CORES -ge 2 && $MEM_MB -ge 2048 ]]; then
+  OPT_LEVEL="custom"
+elif [[ $CORES -ge 1 && $MEM_MB -ge 1024 ]]; then
+  OPT_LEVEL="mid"
+else
+  OPT_LEVEL="low"
+fi
 
-  echo "检测到 CPU 核心数：$CORES"
-  echo "检测到内存：${MEM_MB}MB"
+echo "⚙️ 系统优化等级：$OPT_LEVEL"
 
-  SYSCTL_FILE="/etc/sysctl.d/99-xray.conf"
+read -p "是否应用智能系统优化？[Y/n]: " DO_OPT
+DO_OPT=${DO_OPT:-Y}
 
-  cat > "$SYSCTL_FILE" <<EOF
-net.core.default_qdisc = fq
-net.ipv4.tcp_congestion_control = bbr
+if [[ "$DO_OPT" == "Y" || "$DO_OPT" == "y" ]]; then
+
+  echo ""
+  echo "请选择优化等级："
+  echo "1) 低配服务器优化（1C1G 或更低）"
+  echo "2) 中配服务器优化（2C2G 左右）"
+  echo "3) 高配服务器优化（4C8G 或更高）"
+  read -p "请输入选项 [1-3]（默认：2）: " OPT_LEVEL_INPUT
+  case $OPT_LEVEL_INPUT in
+    1) OPT_LEVEL="low" ;;
+    3) OPT_LEVEL="high" ;;
+    *) OPT_LEVEL="mid" ;;
+  esac
+
+  echo "🚀 正在应用 $OPT_LEVEL 级别的优化参数..."
+
+  echo "🚀 正在应用 $OPT_LEVEL 级别的优化参数..."
+
+  case "$OPT_LEVEL" in
+    high)
+      ulimit -n 1048576
+      echo "ulimit -n 1048576" >> /etc/profile
+      cat > /etc/sysctl.conf <<EOF
+fs.file-max = 6815744
 net.core.netdev_max_backlog = 250000
 net.core.somaxconn = 65535
 net.ipv4.tcp_fastopen = 3
-net.ipv4.tcp_rmem = 4096 87380 67108864
-net.ipv4.tcp_wmem = 4096 65536 67108864
-net.ipv4.tcp_tw_reuse = 1
+net.core.rmem_max=67108864
+net.core.wmem_max=67108864
+net.ipv4.tcp_rmem=4096 87380 67108864
+net.ipv4.tcp_wmem=4096 65536 67108864
+net.core.default_qdisc=fq
+net.ipv4.tcp_congestion_control=bbr
 EOF
+      ;;
+    mid)
+      ulimit -n 524288
+      echo "ulimit -n 524288" >> /etc/profile
+      cat > /etc/sysctl.conf <<EOF
+fs.file-max = 262144
+net.core.netdev_max_backlog = 100000
+net.core.somaxconn = 32768
+net.ipv4.tcp_fastopen = 2
+net.core.rmem_max=33554432
+net.core.wmem_max=33554432
+net.ipv4.tcp_rmem=4096 87380 33554432
+net.ipv4.tcp_wmem=4096 65536 33554432
+net.core.default_qdisc=fq
+net.ipv4.tcp_congestion_control=bbr
+EOF
+      ;;
+    low)
+      ulimit -n 65536
+      echo "ulimit -n 65536" >> /etc/profile
+      cat > /etc/sysctl.conf <<EOF
+fs.file-max = 65536
+net.core.netdev_max_backlog = 8192
+net.core.somaxconn = 8192
+net.ipv4.tcp_fastopen = 1
+net.core.rmem_max=16777216
+net.core.wmem_max=16777216
+net.ipv4.tcp_rmem=4096 65536 16777216
+net.ipv4.tcp_wmem=4096 65536 16777216
+net.core.default_qdisc=fq
+net.ipv4.tcp_congestion_control=bbr
+EOF
+      ;;
+  esac
 
-  sysctl --system
-
-  echo "ulimit -n 1048576" >> /etc/profile
-  ulimit -n 1048576
-
-  echo "✅ 系统优化已完成"
+  sysctl -p && sysctl --system
+  echo "✅ 系统优化参数应用完成"
 fi
 
 echo "-----------------------------------"
@@ -91,11 +149,18 @@ if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
   exit 1
 fi
 
-# 部署容器
+# 根据等级设置 Docker 启动参数
+case "$OPT_LEVEL" in
+  high) DOCKER_ULIMIT="1048576:1048576" ;;
+  mid) DOCKER_ULIMIT="524288:524288" ;;
+  low) DOCKER_ULIMIT="65536:65536" ;;
+esac
+
 docker run -d \
   --restart=always \
   --name "$CONTAINER_NAME" \
   --network=host \
+  --ulimit nofile=$DOCKER_ULIMIT \
   -e PORT=$PORT \
   -e PASSWORD=$PASSWORD \
   -e METHOD=$METHOD \
