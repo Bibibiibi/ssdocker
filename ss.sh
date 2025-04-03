@@ -11,9 +11,15 @@ read -p "请输入你希望使用的端口 (默认: 39761): " PORT
 PORT=${PORT:-39761}
 
 # 密码
-read -p "请输入 Shadowsocks 密码 (默认: 随机生成): " PASSWORD
+echo "请输入 Shadowsocks 密码（留空将自动生成）:"
+read -r PASSWORD
+PASSWORD=$(echo "$PASSWORD" | tr -d '[:space:]')
+
 if [ -z "$PASSWORD" ]; then
   PASSWORD=$(openssl rand -base64 16)
+  echo "自动生成的随机密码为：$PASSWORD"
+else
+  echo "你设置的密码为：$PASSWORD"
 fi
 
 # 加密方式
@@ -69,7 +75,6 @@ echo "连接信息："
 echo "容器名称: $CONTAINER_NAME"
 echo "IP: $(curl -s ifconfig.me)"
 echo "端口: $PORT"
-echo "密码: $PASSWORD"
 echo "加密方式: $METHOD"
 echo "伪装路径: $FAKE_PATH"
 echo "伪装 Host: $FAKE_HOST"
