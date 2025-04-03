@@ -14,7 +14,6 @@ PORT=${PORT:-39761}
 echo "请输入 Shadowsocks 密码（留空将自动生成）:"
 read -r PASSWORD
 PASSWORD=$(echo "$PASSWORD" | tr -d '[:space:]')
-
 if [ -z "$PASSWORD" ]; then
   PASSWORD=$(openssl rand -base64 16)
   echo "自动生成的随机密码为：$PASSWORD"
@@ -40,6 +39,41 @@ FAKE_PATH=${FAKE_PATH:-/}
 
 read -p "请输入伪装 Host (默认: weKbP9SVYU.download.windowsupdate.com): " FAKE_HOST
 FAKE_HOST=${FAKE_HOST:-weKbP9SVYU.download.windowsupdate.com}
+
+# 智能系统优化
+echo ""
+read -p "是否进行系统优化？(推荐) [Y/n]: " OPTIMIZE
+OPTIMIZE=${OPTIMIZE:-Y}
+
+if [[ "$OPTIMIZE" == "Y" || "$OPTIMIZE" == "y" ]]; then
+  echo "⚙️ 开始进行系统优化..."
+
+  CORES=$(nproc)
+  MEM_MB=$(free -m | awk '/Mem:/ { print $2 }')
+
+  echo "检测到 CPU 核心数：$CORES"
+  echo "检测到内存：${MEM_MB}MB"
+
+  SYSCTL_FILE="/etc/sysctl.d/99-xray.conf"
+
+  cat > "$SYSCTL_FILE" <<EOF
+net.core.default_qdisc = fq
+net.ipv4.tcp_congestion_control = bbr
+net.core.netdev_max_backlog = 250000
+net.core.somaxconn = 65535
+net.ipv4.tcp_fastopen = 3
+net.ipv4.tcp_rmem = 4096 87380 67108864
+net.ipv4.tcp_wmem = 4096 65536 67108864
+net.ipv4.tcp_tw_reuse = 1
+EOF
+
+  sysctl --system
+
+  echo "ulimit -n 1048576" >> /etc/profile
+  ulimit -n 1048576
+
+  echo "✅ 系统优化已完成"
+fi
 
 echo "-----------------------------------"
 echo "容器名称: $CONTAINER_NAME"
