@@ -1,6 +1,49 @@
 #!/bin/bash
+echo ""
+echo "请选择操作模式："
+echo "1) 安装部署 Xray"
+echo "2) 卸载并清理 Xray 容器"
+read -p "请输入选项 [1-2]（默认：1）: " ACTION_CHOICE
+
+if [[ "$ACTION_CHOICE" == "2" ]]; then
+  echo "🧹 正在卸载 Xray 容器及相关资源..."
+
+  read -p "请输入要删除的容器名称（默认: xray）: " UNINSTALL_NAME
+  UNINSTALL_NAME=${UNINSTALL_NAME:-xray}
+
+  if docker ps -a --format '{{.Names}}' | grep -qw "$UNINSTALL_NAME"; then
+    docker stop "$UNINSTALL_NAME"
+    docker rm "$UNINSTALL_NAME"
+    echo "✅ 容器 $UNINSTALL_NAME 已删除"
+  else
+    echo "⚠️ 未找到容器 $UNINSTALL_NAME，无需删除"
+  fi
+
+  echo "是否清理 Docker 镜像（kingfalse/onekey-docker-xray:dogdi）？[y/N]: "
+  read CLEAN_IMAGE
+  if [[ "$CLEAN_IMAGE" == "y" || "$CLEAN_IMAGE" == "Y" ]]; then
+    docker rmi kingfalse/onekey-docker-xray:dogdi
+    echo "✅ 镜像已删除"
+  fi
+
+  echo "✅ 卸载完成，脚本退出"
+  exit 0
+fi
 
 echo "========== Xray Docker 一键部署（终极融合版） =========="
+
+echo ""
+echo "🔍 正在检测 Docker 是否安装..."
+if ! command -v docker &> /dev/null; then
+  echo "❌ 未检测到 Docker，正在自动安装..."
+  curl -fsSL https://get.docker.com | bash
+  systemctl enable docker
+  systemctl start docker
+  echo "✅ Docker 安装完成"
+else
+  echo "✅ 已安装 Docker"
+fi
+
 
 read -p "请输入容器名称 (默认: xray): " CONTAINER_NAME
 CONTAINER_NAME=${CONTAINER_NAME:-xray}
