@@ -179,6 +179,9 @@ echo "伪装路径: $FAKE_PATH"
 echo "伪装 Host: $FAKE_HOST"
 
 
+
+
+
 echo ""
 echo "================== 节点配置信息 =================="
 
@@ -186,8 +189,10 @@ SSR_IP=$(curl -s ifconfig.me)
 SSR_PORT=$PORT
 SSR_METHOD=$METHOD
 SSR_PASSWORD=$PASSWORD
+SSR_PATH=$FAKE_PATH
+SSR_HOST=$FAKE_HOST
 
-# Clash 配置
+# Clash 配置（带 plugin + plugin-opts）
 echo ""
 echo "📦 Clash 配置："
 echo "proxies:"
@@ -197,10 +202,15 @@ echo "    server: $SSR_IP"
 echo "    port: $SSR_PORT"
 echo "    cipher: $SSR_METHOD"
 echo "    password: "$SSR_PASSWORD""
+echo "    plugin: obfs"
+echo "    plugin-opts:"
+echo "      mode: http"
+echo "      host: "$SSR_HOST""
+echo "      path: "$SSR_PATH""
 echo "    udp: true"
 
-# Surge 配置
+# Surge 配置（带 obfs 参数）
 echo ""
 echo "📱 Surge 配置："
 echo "[Proxy]"
-echo "xray-ss = ss, $SSR_IP, $SSR_PORT, encrypt-method=$SSR_METHOD, password=$SSR_PASSWORD, udp-relay=true"
+echo "xray-ss = ss, $SSR_IP, $SSR_PORT, encrypt-method=$SSR_METHOD, password=$SSR_PASSWORD, obfs=http, obfs-host=$SSR_HOST, obfs-uri=$SSR_PATH, udp-relay=true"
