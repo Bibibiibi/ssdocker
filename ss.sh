@@ -177,3 +177,30 @@ echo "端口: $PORT"
 echo "加密方式: $METHOD"
 echo "伪装路径: $FAKE_PATH"
 echo "伪装 Host: $FAKE_HOST"
+
+
+echo ""
+echo "================== 节点配置信息 =================="
+
+SSR_IP=$(curl -s ifconfig.me)
+SSR_PORT=$PORT
+SSR_METHOD=$METHOD
+SSR_PASSWORD=$PASSWORD
+
+# Clash 配置
+echo ""
+echo "📦 Clash 配置："
+echo "proxies:"
+echo "  - name: xray-ss"
+echo "    type: ss"
+echo "    server: $SSR_IP"
+echo "    port: $SSR_PORT"
+echo "    cipher: $SSR_METHOD"
+echo "    password: "$SSR_PASSWORD""
+echo "    udp: true"
+
+# Surge 配置
+echo ""
+echo "📱 Surge 配置："
+echo "[Proxy]"
+echo "xray-ss = ss, $SSR_IP, $SSR_PORT, encrypt-method=$SSR_METHOD, password=$SSR_PASSWORD, udp-relay=true"
