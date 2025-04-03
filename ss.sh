@@ -214,3 +214,14 @@ echo ""
 echo "📱 Surge 配置："
 echo "[Proxy]"
 echo "xray-ss = ss, $SSR_IP, $SSR_PORT, encrypt-method=$SSR_METHOD, password=$SSR_PASSWORD, obfs=http, obfs-host=$SSR_HOST, obfs-uri=$SSR_PATH, udp-relay=true"
+
+
+# SS URI 格式：ss://base64(method:password@host:port)?plugin=obfs-local%3Bobfs%3Dhttp%3Bobfs-host%3Dexample.com#备注
+PLUGIN_STRING="plugin=obfs-local%3Bobfs%3Dhttp%3Bobfs-host%3D${SSR_HOST}"
+ENCODED_PLUGIN=$(echo -n "${SSR_METHOD}:${SSR_PASSWORD}@${SSR_IP}:${SSR_PORT}" | base64 -w 0)
+
+SS_URI="ss://${ENCODED_PLUGIN}?${PLUGIN_STRING}#xray-ss"
+
+echo ""
+echo "🔗 SS 连接（带 obfs 插件）："
+echo "$SS_URI"
