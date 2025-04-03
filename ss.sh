@@ -192,7 +192,7 @@ SSR_PASSWORD=$PASSWORD
 SSR_PATH=$FAKE_PATH
 SSR_HOST=$FAKE_HOST
 
-# Clash 配置（带 plugin + plugin-opts）
+# Clash 配置（完整格式）
 echo ""
 echo "📦 Clash 配置："
 echo "proxies:"
