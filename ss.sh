@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "========== Xray Docker 一键部署（完整增强版） =========="
+echo "========== Xray Docker 一键部署（终极融合版） =========="
 
 read -p "请输入容器名称 (默认: xray): " CONTAINER_NAME
 CONTAINER_NAME=${CONTAINER_NAME:-xray}
@@ -48,10 +48,27 @@ fi
 echo ""
 read -p "是否进行系统优化？[Y/n]: " DO_OPT
 DO_OPT=${DO_OPT:-Y}
+
 if [[ "$DO_OPT" == "Y" || "$DO_OPT" == "y" ]]; then
-  ulimit -n 1048576
-  echo "ulimit -n 1048576" >> /etc/profile
-  cat > /etc/sysctl.conf <<EOF
+  echo ""
+  echo "请选择优化等级："
+  echo "1) 低配服务器优化（1C1G 或更低）"
+  echo "2) 中配服务器优化（2C2G 左右）"
+  echo "3) 高配服务器优化（4C8G 或更高）"
+  read -p "请输入选项 [1-3]（默认：2）: " OPT_LEVEL_INPUT
+  case $OPT_LEVEL_INPUT in
+    1) OPT_LEVEL="low" ;;
+    3) OPT_LEVEL="high" ;;
+    *) OPT_LEVEL="mid" ;;
+  esac
+
+  echo "🚀 正在应用 $OPT_LEVEL 级别的优化参数..."
+
+  case "$OPT_LEVEL" in
+    high)
+      ulimit -n 1048576
+      echo "ulimit -n 1048576" >> /etc/profile
+      cat > /etc/sysctl.conf <<EOF
 fs.file-max = 6815744
 net.core.netdev_max_backlog = 250000
 net.core.somaxconn = 65535
@@ -63,15 +80,57 @@ net.ipv4.tcp_wmem=4096 65536 67108864
 net.core.default_qdisc=fq
 net.ipv4.tcp_congestion_control=bbr
 EOF
+      ;;
+    mid)
+      ulimit -n 524288
+      echo "ulimit -n 524288" >> /etc/profile
+      cat > /etc/sysctl.conf <<EOF
+fs.file-max = 262144
+net.core.netdev_max_backlog = 100000
+net.core.somaxconn = 32768
+net.ipv4.tcp_fastopen = 2
+net.core.rmem_max=33554432
+net.core.wmem_max=33554432
+net.ipv4.tcp_rmem=4096 87380 33554432
+net.ipv4.tcp_wmem=4096 65536 33554432
+net.core.default_qdisc=fq
+net.ipv4.tcp_congestion_control=bbr
+EOF
+      ;;
+    low)
+      ulimit -n 65536
+      echo "ulimit -n 65536" >> /etc/profile
+      cat > /etc/sysctl.conf <<EOF
+fs.file-max = 65536
+net.core.netdev_max_backlog = 8192
+net.core.somaxconn = 8192
+net.ipv4.tcp_fastopen = 1
+net.core.rmem_max=16777216
+net.core.wmem_max=16777216
+net.ipv4.tcp_rmem=4096 65536 16777216
+net.ipv4.tcp_wmem=4096 65536 16777216
+net.core.default_qdisc=fq
+net.ipv4.tcp_congestion_control=bbr
+EOF
+      ;;
+  esac
+
   sysctl -p && sysctl --system
   echo "✅ 系统优化参数应用完成"
 fi
+
+case "$OPT_LEVEL" in
+  high) DOCKER_ULIMIT="1048576:1048576" ;;
+  mid) DOCKER_ULIMIT="524288:524288" ;;
+  low) DOCKER_ULIMIT="65536:65536" ;;
+  *) DOCKER_ULIMIT="524288:524288" ;;  # 默认中配
+esac
 
 docker run -d \
   --restart=always \
   --name "$CONTAINER_NAME" \
   --network=host \
-  --ulimit nofile=1048576:1048576 \
+  --ulimit nofile=$DOCKER_ULIMIT \
   -e PORT=$PORT \
   -e PASSWORD=$PASSWORD \
   -e METHOD=$METHOD \
