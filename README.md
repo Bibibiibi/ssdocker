@@ -1,1 +1,1 @@
-bash <(curl -fsSL https://raw.githubusercontent.com/Bibibiibi/ssdocker/main/ss.sh)
+bash <(curl -sSL  https://raw.githubusercontent.com/Bibibiibi/ssdocker/main/install.sh)
