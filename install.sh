@@ -2,7 +2,7 @@
 set -e
 
 BIN_NAME="ssmanager"
-BIN_URL="https://github.com/Bibibiibi/ssinstall/releases/download/1/ssmanager"
+BIN_URL="https://github.com/Bibibiibi/ssdocker/releases/download/untagged-af950e62d70ab608f0cc/ssmanager"
 
 TMP_DIR=$(mktemp -d)
 cd "$TMP_DIR"
